@@ -1,0 +1,36 @@
+version: v2
+description: open-instruct-sft-mix-batch
+budget: ai2/oe-adapt
+tasks:
+  - name: tulu2-sft-mix-batch
+    image:
+      beaker: hamishivi/open-instruct-eval
+    command: ["/bin/sh", "-c"]
+    arguments: ["scripts/prepare_train_data.sh"]
+    envVars:
+      - name: CUDA_DEVICE_ORDER
+        value: PCI_BUS_ID
+      - name: TRANSFORMERS_CACHE
+        value: ./cache/
+      - name: WANDB_PROJECT
+        value: open-instruct
+      - name: WANDB_WATCH
+        value: false
+      - name: WANDB_LOG_MODEL
+        value: false
+      - name: WANDB_DISABLED
+        value: true
+      - name: HF_TOKEN
+        secret: HF_TOKEN
+      - name: OPENAI_API_KEY
+        secret: OPENAI_API_KEY
+    result:
+      path: /stage/data/processed/
+    resources:
+      gpuCount: 1
+    constraints:
+      cluster:
+        - ai2/allennlp-cirrascale
+    context:
+      priority: normal
+      preemptible: false
