@@ -4,7 +4,7 @@ budget: ai2/oe-adapt
 tasks:
   - name: tulu2-sft-mix-batch
     image:
-      beaker: hamishivi/open-instruct-eval
+      beaker: ljm/open-instruct-dev
     command: ["/bin/sh", "-c"]
     arguments: ["scripts/prepare_train_data.sh"]
     envVars:
