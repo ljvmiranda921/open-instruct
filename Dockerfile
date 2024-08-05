@@ -105,6 +105,7 @@ RUN pip install --upgrade pip "setuptools<70.0.0" wheel
 RUN pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu121
 RUN pip install packaging
 RUN pip install flash-attn==2.5.8 --no-build-isolation
+RUN pip install pandas
 RUN pip install -r requirements.txt
 
 # NLTK download
