@@ -1062,6 +1062,34 @@ if __name__ == "__main__":
                 ),
                 repeat=10,
             )
+            # New splits
+            convert_super_ni_data(
+                data_dir=os.path.join(args.raw_data_dir, "super_ni"),
+                output_dir=os.path.join(args.output_dir, "tulu_v2", "super_ni_subset"),
+            )
+            convert_self_instruct_data(
+                data_dir=os.path.join(args.raw_data_dir, "self_instruct"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "self_instruct_subset"
+                ),
+            )
+            convert_unnatural_instructions_data(
+                data_dir=os.path.join(args.raw_data_dir, "unnatural_instructions"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "unnatural_instructions_subset"
+                ),
+            )
+            convert_stanford_alpaca_data(
+                data_dir=os.path.join(args.raw_data_dir, "stanford_alpaca"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "stanford_alpaca_subset"
+                ),
+            )
+            convert_baize_data(
+                data_dir=os.path.join(args.raw_data_dir, "baize"),
+                output_dir=os.path.join(args.output_dir, "tulu_v2", "baize_subset"),
+            )
+
             # merge all the subsets
             print("Merging all the subsets to create tulu v2...")
             all_subsets = [
