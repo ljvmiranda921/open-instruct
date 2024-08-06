@@ -37,8 +37,16 @@ encoding_templates_w_input = [
     ("Task: {instruction}\nInput: {input}\nOutput:", "{output}", 0.05),
     ("Task: {instruction}\n\n{input}\n\n", "{output}", 0.05),
     ("Task: {instruction}\n\n{input}\n\nAnswer:", "{output}", 0.05),
-    ("You need to complete the following task:\n\n{instruction}\n\n{input}\n\nAnswer:", "{output}", 0.05),
-    ("{instruction}\n\nNow complete the following instance -\nInput: {input}\nOutput:", "{output}", 0.05),
+    (
+        "You need to complete the following task:\n\n{instruction}\n\n{input}\n\nAnswer:",
+        "{output}",
+        0.05,
+    ),
+    (
+        "{instruction}\n\nNow complete the following instance -\nInput: {input}\nOutput:",
+        "{output}",
+        0.05,
+    ),
     ("Instruction:{instruction}\n\nInput: {input}\n\n", "{output}", 0.05),
     (
         "Below is an instruction that describes a task, paired with an input that provides further context."
@@ -63,7 +71,11 @@ encoding_templates_wo_input = [
     ("You need to complete the following task:\n\n{instruction}\n\n", "{output}", 0.05),
     ("Can you help with this?\n\n{instruction}\n", "{output}", 0.05),
     ("Plase answer the following request: {instruction}\nAnswer:", "{output}", 0.05),
-    ("Tell me how would you respond to the following request.\n{instruction}\n", "{output}", 0.05),
+    (
+        "Tell me how would you respond to the following request.\n{instruction}\n",
+        "{output}",
+        0.05,
+    ),
     (
         "Write a response that appropriately completes the request."
         "\n\n### Instruction:\n{instruction}\n\n### Response:",
@@ -73,19 +85,25 @@ encoding_templates_wo_input = [
 ]
 
 
-def encode_instruction_example(instruction, input, output, random_template=True, eos_token=None):
+def encode_instruction_example(
+    instruction, input, output, random_template=True, eos_token=None
+):
     if random_template:
         if input is not None and input.strip() != "":
             # randomly choose a template with input
             prompt_template, completion_template, _ = random.choices(
-                encoding_templates_w_input, weights=[w for _, _, w in encoding_templates_w_input]
+                encoding_templates_w_input,
+                weights=[w for _, _, w in encoding_templates_w_input],
             )[0]
-            prompt = prompt_template.format(instruction=instruction.strip(), input=input.strip())
+            prompt = prompt_template.format(
+                instruction=instruction.strip(), input=input.strip()
+            )
             completion = completion_template.format(output=output.strip())
         else:
             # randomly choose a template without input
             prompt_template, completion_template, _ = random.choices(
-                encoding_templates_wo_input, weights=[w for _, _, w in encoding_templates_wo_input]
+                encoding_templates_wo_input,
+                weights=[w for _, _, w in encoding_templates_wo_input],
             )[0]
             prompt = prompt_template.format(instruction=instruction.strip())
             completion = completion_template.format(output=output.strip())
@@ -121,11 +139,17 @@ def encode_few_shot_example(instruction, examplars, input, output, eos_token=Non
 
 
 def convert_super_ni_data(
-    data_dir, output_dir, zero_shot_examples_per_task=60, few_shot_examples_per_task=20, n_few_shot=2
+    data_dir,
+    output_dir,
+    zero_shot_examples_per_task=60,
+    few_shot_examples_per_task=20,
+    n_few_shot=2,
 ):
     os.makedirs(output_dir, exist_ok=True)
     train_tasks = []
-    with open(os.path.join(data_dir, "splits", "xlingual", "train_tasks.txt"), "r") as fin:
+    with open(
+        os.path.join(data_dir, "splits", "xlingual", "train_tasks.txt"), "r"
+    ) as fin:
         for line in fin:
             if "_mmmlu_" not in line:  # skip mmlu to avoid test leakage
                 train_tasks.append(line.strip())
@@ -134,9 +158,12 @@ def convert_super_ni_data(
             with open(os.path.join(data_dir, "tasks", f"{task}.json"), "r") as fin:
                 task_data = json.load(fin)
             instruction = task_data["Definition"][0]
-            if zero_shot_examples_per_task + few_shot_examples_per_task < len(task_data["Instances"]):
+            if zero_shot_examples_per_task + few_shot_examples_per_task < len(
+                task_data["Instances"]
+            ):
                 instances = random.sample(
-                    task_data["Instances"], k=zero_shot_examples_per_task + few_shot_examples_per_task
+                    task_data["Instances"],
+                    k=zero_shot_examples_per_task + few_shot_examples_per_task,
                 )
             else:
                 instances = task_data["Instances"]
@@ -155,7 +182,10 @@ def convert_super_ni_data(
                             "id": f"super_ni_{instance['id']}",
                             "messages": [
                                 {"role": "user", "content": encoded_example["prompt"]},
-                                {"role": "assistant", "content": encoded_example["completion"]},
+                                {
+                                    "role": "assistant",
+                                    "content": encoded_example["completion"],
+                                },
                             ],
                         }
                     )
@@ -163,7 +193,9 @@ def convert_super_ni_data(
                 )
             for instance in instances[zero_shot_examples_per_task:]:
                 if n_few_shot < len(task_data["Positive Examples"]):
-                    examplars = random.sample(task_data["Positive Examples"], k=n_few_shot)
+                    examplars = random.sample(
+                        task_data["Positive Examples"], k=n_few_shot
+                    )
                 else:
                     examplars = task_data["Positive Examples"]
                 encoded_example = encode_few_shot_example(
@@ -180,7 +212,10 @@ def convert_super_ni_data(
                             "id": f"super_ni_{instance['id']}",
                             "messages": [
                                 {"role": "user", "content": encoded_example["prompt"]},
-                                {"role": "assistant", "content": encoded_example["completion"]},
+                                {
+                                    "role": "assistant",
+                                    "content": encoded_example["completion"],
+                                },
                             ],
                         }
                     )
@@ -188,20 +223,26 @@ def convert_super_ni_data(
                 )
 
 
-def convert_cot_data(data_dir, output_dir, num_zero_shot_examples=50000, num_few_shot_examples=50000):
+def convert_cot_data(
+    data_dir, output_dir, num_zero_shot_examples=50000, num_few_shot_examples=50000
+):
     os.makedirs(output_dir, exist_ok=True)
     examples = []
     if num_zero_shot_examples > 0:
         with open(os.path.join(data_dir, "cot_zsopt.jsonl"), "r") as fin:
             zero_shot_examples = [json.loads(line) for line in fin]
             if num_zero_shot_examples < len(zero_shot_examples):
-                zero_shot_examples = random.sample(zero_shot_examples, k=num_zero_shot_examples)
+                zero_shot_examples = random.sample(
+                    zero_shot_examples, k=num_zero_shot_examples
+                )
             examples.extend(zero_shot_examples)
     if num_few_shot_examples > 0:
         with open(os.path.join(data_dir, "cot_fsopt.jsonl"), "r") as fin:
             few_shot_examples = [json.loads(line) for line in fin]
             if num_few_shot_examples < len(few_shot_examples):
-                few_shot_examples = random.sample(few_shot_examples, k=num_few_shot_examples)
+                few_shot_examples = random.sample(
+                    few_shot_examples, k=num_few_shot_examples
+                )
             examples.extend(few_shot_examples)
     output_path = os.path.join(output_dir, "cot_data.jsonl")
     with open(output_path, "w") as fout:
@@ -225,7 +266,9 @@ def convert_cot_data(data_dir, output_dir, num_zero_shot_examples=50000, num_few
             )
 
 
-def convert_flan_v2_data(data_dir, output_dir, data_file="tulu_v1_resampled_flan_100k.jsonl"):
+def convert_flan_v2_data(
+    data_dir, output_dir, data_file="tulu_v1_resampled_flan_100k.jsonl"
+):
     os.makedirs(output_dir, exist_ok=True)
     examples = []
     with open(os.path.join(data_dir, data_file), "r") as fin:
@@ -278,7 +321,10 @@ def convert_dolly_data(data_dir, output_dir, number_examples=None):
                         "id": f"dolly_{idx}",
                         "messages": [
                             {"role": "user", "content": encoded_example["prompt"]},
-                            {"role": "assistant", "content": encoded_example["completion"]},
+                            {
+                                "role": "assistant",
+                                "content": encoded_example["completion"],
+                            },
                         ],
                     }
                 )
@@ -311,7 +357,10 @@ def convert_self_instruct_data(data_dir, output_dir, number_examples=None):
                         "id": f"self_instruct_{idx}",
                         "messages": [
                             {"role": "user", "content": encoded_example["prompt"]},
-                            {"role": "assistant", "content": encoded_example["completion"]},
+                            {
+                                "role": "assistant",
+                                "content": encoded_example["completion"],
+                            },
                         ],
                     }
                 )
@@ -327,7 +376,10 @@ def convert_unnatural_instructions_data(data_dir, output_dir, num_examples=None)
             task_data = json.loads(line)
             instruction = task_data["instruction"]
             for instance in task_data["instances"]:
-                if instance["constraints"] and instance["constraints"].lower() not in ["none", "none."]:
+                if instance["constraints"] and instance["constraints"].lower() not in [
+                    "none",
+                    "none.",
+                ]:
                     instance_instruction = instruction + "\n" + instance["constraints"]
                 else:
                     instance_instruction = instruction
@@ -341,7 +393,9 @@ def convert_unnatural_instructions_data(data_dir, output_dir, num_examples=None)
                 examples.append(encoded_example)
     if num_examples:
         examples = random.sample(examples, k=num_examples)
-    with open((os.path.join(output_dir, "unnatural_instructions_data.jsonl")), "w") as fout:
+    with open(
+        (os.path.join(output_dir, "unnatural_instructions_data.jsonl")), "w"
+    ) as fout:
         for idx, example in enumerate(examples):
             fout.write(
                 json.dumps(
@@ -382,7 +436,10 @@ def convert_stanford_alpaca_data(data_dir, output_dir, num_examples=None):
                         "id": f"stanford_alpaca_{idx}",
                         "messages": [
                             {"role": "user", "content": encoded_example["prompt"]},
-                            {"role": "assistant", "content": encoded_example["completion"]},
+                            {
+                                "role": "assistant",
+                                "content": encoded_example["completion"],
+                            },
                         ],
                     }
                 )
@@ -414,7 +471,10 @@ def convert_code_alpaca_data(data_dir, output_dir, num_examples=None):
                         "id": f"code_alpaca_{idx}",
                         "messages": [
                             {"role": "user", "content": encoded_example["prompt"]},
-                            {"role": "assistant", "content": encoded_example["completion"]},
+                            {
+                                "role": "assistant",
+                                "content": encoded_example["completion"],
+                            },
                         ],
                     }
                 )
@@ -422,7 +482,9 @@ def convert_code_alpaca_data(data_dir, output_dir, num_examples=None):
             )
 
 
-def convert_gpt4_alpaca_data(data_dir, output_dir, load_en=True, load_zh=False, num_examples=None):
+def convert_gpt4_alpaca_data(
+    data_dir, output_dir, load_en=True, load_zh=False, num_examples=None
+):
     os.makedirs(output_dir, exist_ok=True)
     examples = []
     if load_en:
@@ -450,7 +512,10 @@ def convert_gpt4_alpaca_data(data_dir, output_dir, load_en=True, load_zh=False, 
                         "id": f"gpt4_alpaca_{idx}",
                         "messages": [
                             {"role": "user", "content": encoded_example["prompt"]},
-                            {"role": "assistant", "content": encoded_example["completion"]},
+                            {
+                                "role": "assistant",
+                                "content": encoded_example["completion"],
+                            },
                         ],
                     }
                 )
@@ -459,7 +524,10 @@ def convert_gpt4_alpaca_data(data_dir, output_dir, load_en=True, load_zh=False, 
 
 
 def convert_sharegpt_data(
-    data_dir, output_dir, data_file="sharegpt_html_cleaned_and_split_2048.json", num_examples=None
+    data_dir,
+    output_dir,
+    data_file="sharegpt_html_cleaned_and_split_2048.json",
+    num_examples=None,
 ):
     os.makedirs(output_dir, exist_ok=True)
     examples = []
@@ -491,7 +559,14 @@ def convert_sharegpt_data(
                     raise ValueError(f"Unknown message sender: {message['from']}")
             if messages and valid:
                 fout.write(
-                    json.dumps({"dataset": "sharegpt", "id": f"sharegpt_{example['id']}", "messages": messages}) + "\n"
+                    json.dumps(
+                        {
+                            "dataset": "sharegpt",
+                            "id": f"sharegpt_{example['id']}",
+                            "messages": messages,
+                        }
+                    )
+                    + "\n"
                 )
         if invalid_cnt > 0:
             print(f"# of invalid examples in sharegpt data: {invalid_cnt}")
@@ -517,7 +592,12 @@ def convert_baize_data(data_dir, output_dir, num_examples=None):
                 human, assistant = round.split("[|AI|]")
                 messages.append({"role": "user", "content": human.strip()})
                 messages.append({"role": "assistant", "content": assistant.strip()})
-            fout.write(json.dumps({"dataset": "baize", "id": f"baize_{idx}", "messages": messages}) + "\n")
+            fout.write(
+                json.dumps(
+                    {"dataset": "baize", "id": f"baize_{idx}", "messages": messages}
+                )
+                + "\n"
+            )
 
 
 def convert_oasst1_data(data_dir, output_dir, top_k_reply=None):
@@ -547,7 +627,9 @@ def convert_oasst1_data(data_dir, output_dir, top_k_reply=None):
             if not reply["replies"]:  # leaf node
                 valid_sequences.append(messages[:])
             else:
-                child_replies = [child for child in reply["replies"] if not child["deleted"]]
+                child_replies = [
+                    child for child in reply["replies"] if not child["deleted"]
+                ]
                 for child in child_replies:
                     if "quality" not in child["labels"]:
                         child["labels"]["quality"] = {
@@ -557,16 +639,20 @@ def convert_oasst1_data(data_dir, output_dir, top_k_reply=None):
                 child_replies = (
                     child_replies
                     if top_k_reply is None
-                    else sorted(child_replies, key=lambda x: x["labels"]["quality"]["value"], reverse=True)[
-                        :top_k_reply
-                    ]
+                    else sorted(
+                        child_replies,
+                        key=lambda x: x["labels"]["quality"]["value"],
+                        reverse=True,
+                    )[:top_k_reply]
                 )
                 for child in child_replies:
                     dfs(child, messages, valid_sequences)
             messages.pop()
         elif reply["role"] == "prompter":
             messages.append({"role": "user", "content": reply["text"]})
-            child_replies = [child for child in reply["replies"] if not child["deleted"]]
+            child_replies = [
+                child for child in reply["replies"] if not child["deleted"]
+            ]
             for child in child_replies:
                 if "quality" not in child["labels"]:
                     child["labels"]["quality"] = {
@@ -576,7 +662,11 @@ def convert_oasst1_data(data_dir, output_dir, top_k_reply=None):
             child_replies = (
                 child_replies
                 if top_k_reply is None
-                else sorted(child_replies, key=lambda x: x["labels"]["quality"]["value"], reverse=True)[:top_k_reply]
+                else sorted(
+                    child_replies,
+                    key=lambda x: x["labels"]["quality"]["value"],
+                    reverse=True,
+                )[:top_k_reply]
             )
             for child in child_replies:
                 dfs(child, messages, valid_sequences)
@@ -591,7 +681,14 @@ def convert_oasst1_data(data_dir, output_dir, top_k_reply=None):
             dfs(conversation["prompt"], [], valid_sequences)
             for sequence in valid_sequences:
                 fout.write(
-                    json.dumps({"dataset": "oasst1", "id": f"oasst1_{example_cnt}", "messages": sequence}) + "\n"
+                    json.dumps(
+                        {
+                            "dataset": "oasst1",
+                            "id": f"oasst1_{example_cnt}",
+                            "messages": sequence,
+                        }
+                    )
+                    + "\n"
                 )
                 example_cnt += 1
 
@@ -609,12 +706,18 @@ def convert_lima_data(data_dir, output_dir, num_examples=None):
         for idx, example in enumerate(examples):
             messages = []
             if not len(example["conversations"]) % 2 == 0:
-                print(f"Waring: example {idx} in LIMA has odd number of messages. Cutting off the last message.")
+                print(
+                    f"Waring: example {idx} in LIMA has odd number of messages. Cutting off the last message."
+                )
                 example["conversations"] = example["conversations"][:-1]
 
             for i in range(0, len(example["conversations"]), 2):
-                messages.append({"role": "user", "content": example["conversations"][i]})
-                messages.append({"role": "assistant", "content": example["conversations"][i + 1]})
+                messages.append(
+                    {"role": "user", "content": example["conversations"][i]}
+                )
+                messages.append(
+                    {"role": "assistant", "content": example["conversations"][i + 1]}
+                )
             fout.write(
                 json.dumps(
                     {
@@ -633,10 +736,13 @@ def convert_wizardlm_data(data_dir, output_dir, num_examples=30000):
     # check if the original json file exists
     if os.path.exists(os.path.join(data_dir, "WizardLM_evol_instruct_V2_143k.json")):
         # proceed as normally
-        with open(os.path.join(data_dir, "WizardLM_evol_instruct_V2_143k.json"), "r") as fin:
+        with open(
+            os.path.join(data_dir, "WizardLM_evol_instruct_V2_143k.json"), "r"
+        ) as fin:
             examples = json.load(fin)
     else:  # try other data train-00000-of-00001-004cd1ba9dc05e6c.parquet
-        df = pd.read_parquet(os.path.join(data_dir, "train-00000-of-00001-004cd1ba9dc05e6c.parquet"))
+        # df = pd.read_parquet(os.path.join(data_dir, "train-00000-of-00001-004cd1ba9dc05e6c.parquet"))
+        df = pd.read_parquet(os.path.join(data_dir, "train-00000-of-00001.parquet"))
         examples = df.to_dict(orient="records")
     if num_examples:
         examples = random.sample(examples, k=num_examples)
@@ -649,8 +755,15 @@ def convert_wizardlm_data(data_dir, output_dir, num_examples=30000):
             for i in range(0, len(example["conversations"]), 2):
                 assert example["conversations"][i]["from"] == "human"
                 assert example["conversations"][i + 1]["from"] == "gpt"
-                messages.append({"role": "user", "content": example["conversations"][i]["value"]})
-                messages.append({"role": "assistant", "content": example["conversations"][i + 1]["value"]})
+                messages.append(
+                    {"role": "user", "content": example["conversations"][i]["value"]}
+                )
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": example["conversations"][i + 1]["value"],
+                    }
+                )
             fout.write(
                 json.dumps(
                     {
@@ -663,7 +776,9 @@ def convert_wizardlm_data(data_dir, output_dir, num_examples=30000):
             )
 
 
-def convert_open_orca_data(data_dir, output_dir, num_gpt4_examples=30000, num_gpt35_examples=0):
+def convert_open_orca_data(
+    data_dir, output_dir, num_gpt4_examples=30000, num_gpt35_examples=0
+):
     os.makedirs(output_dir, exist_ok=True)
     examples = []
 
@@ -772,7 +887,12 @@ def should_be_filtered(example):
         "OpenAssistant",
     ]
     for message in example["messages"]:
-        if any([filter_string.lower() in message["content"].lower() for filter_string in filter_strings]):
+        if any(
+            [
+                filter_string.lower() in message["content"].lower()
+                for filter_string in filter_strings
+            ]
+        ):
             return True
     return False
 
@@ -800,7 +920,11 @@ if __name__ == "__main__":
     random.seed(args.seed)
 
     # get the subfolder names in raw_data_dir
-    subfolders = [f for f in os.listdir(args.raw_data_dir) if os.path.isdir(os.path.join(args.raw_data_dir, f))]
+    subfolders = [
+        f
+        for f in os.listdir(args.raw_data_dir)
+        if os.path.isdir(os.path.join(args.raw_data_dir, f))
+    ]
 
     for dataset in args.dataset:
         if dataset == "tulu_v1":
@@ -827,14 +951,18 @@ if __name__ == "__main__":
             )
             convert_gpt4_alpaca_data(
                 data_dir=os.path.join(args.raw_data_dir, "gpt4_alpaca"),
-                output_dir=os.path.join(args.output_dir, "tulu_v1", "gpt4_alpaca_subset"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v1", "gpt4_alpaca_subset"
+                ),
                 load_en=True,
                 load_zh=False,
                 num_examples=None,
             )
             convert_code_alpaca_data(
                 data_dir=os.path.join(args.raw_data_dir, "code_alpaca"),
-                output_dir=os.path.join(args.output_dir, "tulu_v1", "code_alpaca_subset"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v1", "code_alpaca_subset"
+                ),
                 num_examples=None,
             )
             convert_sharegpt_data(
@@ -845,12 +973,24 @@ if __name__ == "__main__":
             )
             # merge all the subsets
             print("Merging all the subsets to create tulu v1...")
-            all_subsets = [f for f in os.listdir(os.path.join(args.output_dir, "tulu_v1")) if f.endswith("_subset")]
-            with open(os.path.join(args.output_dir, "tulu_v1", "tulu_v1_data.jsonl"), "w") as fout:
+            all_subsets = [
+                f
+                for f in os.listdir(os.path.join(args.output_dir, "tulu_v1"))
+                if f.endswith("_subset")
+            ]
+            with open(
+                os.path.join(args.output_dir, "tulu_v1", "tulu_v1_data.jsonl"), "w"
+            ) as fout:
                 for subset in all_subsets:
                     dataset_name = subset[: -len("_subset")]
                     with open(
-                        os.path.join(args.output_dir, "tulu_v1", subset, f"{dataset_name}_data.jsonl"), "r"
+                        os.path.join(
+                            args.output_dir,
+                            "tulu_v1",
+                            subset,
+                            f"{dataset_name}_data.jsonl",
+                        ),
+                        "r",
                     ) as fin:
                         for line in fin:
                             fout.write(line)
@@ -879,14 +1019,18 @@ if __name__ == "__main__":
             )
             convert_gpt4_alpaca_data(
                 data_dir=os.path.join(args.raw_data_dir, "gpt4_alpaca"),
-                output_dir=os.path.join(args.output_dir, "tulu_v2", "gpt4_alpaca_subset"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "gpt4_alpaca_subset"
+                ),
                 load_en=True,
                 load_zh=False,
                 num_examples=20000,
             )
             convert_code_alpaca_data(
                 data_dir=os.path.join(args.raw_data_dir, "code_alpaca"),
-                output_dir=os.path.join(args.output_dir, "tulu_v2", "code_alpaca_subset"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "code_alpaca_subset"
+                ),
                 num_examples=None,
             )
             convert_sharegpt_data(
@@ -913,28 +1057,77 @@ if __name__ == "__main__":
             )
             convert_hard_coded_data(
                 data_dir=os.path.join(args.raw_data_dir, "hard_coded"),
-                output_dir=os.path.join(args.output_dir, "tulu_v2", "hard_coded_subset"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "hard_coded_subset"
+                ),
                 repeat=10,
             )
+            # New splits
+            convert_super_ni_data(
+                data_dir=os.path.join(args.raw_data_dir, "super_ni"),
+                output_dir=os.path.join(args.output_dir, "tulu_v2", "super_ni_subset"),
+            )
+            convert_self_instruct_data(
+                data_dir=os.path.join(args.raw_data_dir, "self_instruct"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "self_instruct_subset"
+                ),
+            )
+            convert_unnatural_instructions_data(
+                data_dir=os.path.join(args.raw_data_dir, "unnatural_instructions"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "unnatural_instructions_subset"
+                ),
+            )
+            convert_stanford_alpaca_data(
+                data_dir=os.path.join(args.raw_data_dir, "stanford_alpaca"),
+                output_dir=os.path.join(
+                    args.output_dir, "tulu_v2", "stanford_alpaca_subset"
+                ),
+            )
+            convert_baize_data(
+                data_dir=os.path.join(args.raw_data_dir, "baize"),
+                output_dir=os.path.join(args.output_dir, "tulu_v2", "baize_subset"),
+            )
+
             # merge all the subsets
             print("Merging all the subsets to create tulu v2...")
-            all_subsets = [f for f in os.listdir(os.path.join(args.output_dir, "tulu_v2")) if f.endswith("_subset")]
-            tulu_v2_path = os.path.join(args.output_dir, "tulu_v2", "tulu_v2_data.jsonl")
-            tulu_v2_filtered_path = os.path.join(args.output_dir, "tulu_v2", "tulu_v2_filtered_data.jsonl")
-            with open(tulu_v2_path, "w") as fout, open(tulu_v2_filtered_path, "w") as fout_filtered:
+            all_subsets = [
+                f
+                for f in os.listdir(os.path.join(args.output_dir, "tulu_v2"))
+                if f.endswith("_subset")
+            ]
+            tulu_v2_path = os.path.join(
+                args.output_dir, "tulu_v2", "tulu_v2_data.jsonl"
+            )
+            tulu_v2_filtered_path = os.path.join(
+                args.output_dir, "tulu_v2", "tulu_v2_filtered_data.jsonl"
+            )
+            with open(tulu_v2_path, "w") as fout, open(
+                tulu_v2_filtered_path, "w"
+            ) as fout_filtered:
                 for subset in all_subsets:
                     dataset_name = subset[: -len("_subset")]
                     with open(
-                        os.path.join(args.output_dir, "tulu_v2", subset, f"{dataset_name}_data.jsonl"), "r"
+                        os.path.join(
+                            args.output_dir,
+                            "tulu_v2",
+                            subset,
+                            f"{dataset_name}_data.jsonl",
+                        ),
+                        "r",
                     ) as fin:
                         for line in fin:
                             example = json.loads(line)
-                            if subset not in ["hard_coded_subset"] and should_be_filtered(example):
+                            if subset not in [
+                                "hard_coded_subset"
+                            ] and should_be_filtered(example):
                                 fout_filtered.write(line)
                             else:
                                 fout.write(line)
         else:
             print(f"Processing {dataset} data with default configurations...")
             globals()[f"convert_{dataset}_data"](
-                os.path.join(args.raw_data_dir, dataset), os.path.join(args.output_dir, dataset)
+                os.path.join(args.raw_data_dir, dataset),
+                os.path.join(args.output_dir, dataset),
             )

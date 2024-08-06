@@ -2,6 +2,8 @@
 This script is largely copied from the Vicuna repo: https://github.com/lm-sys/FastChat/blob/main/fastchat/data/split_long_conversation.py
 We fixed a bug in `split_one_sample`, which previously includes long conversations in the processed data. Now we skip these long conversations.
 """
+
+import sys
 import argparse
 from concurrent.futures import ProcessPoolExecutor
 import json
@@ -39,7 +41,9 @@ def split_one_sample(sample):
         tmp_len = tokenized_lens[i] + tokenized_lens[i + 1]
         if cur_len + tmp_len > max_length:
             new_samples.append(make_sample(sample, start_idx, i))
-            if tmp_len > max_length:  # if the current conversation is too long, we should skip it
+            if (
+                tmp_len > max_length
+            ):  # if the current conversation is too long, we should skip it
                 start_idx = i + 2
             else:
                 start_idx = i
@@ -64,7 +68,12 @@ def split_all(content, begin, end, tokenizer_, max_length_):
     new_content = []
 
     with ProcessPoolExecutor(max_workers=128) as executor:
-        for result in tqdm(executor.map(split_one_sample, content), total=len(content)):
+        for result in tqdm(
+            executor.map(split_one_sample, content),
+            total=len(content),
+            file=sys.stdout,
+            bar_format="{l_bar}{bar}{r_bar}\n",
+        ):
             new_content.extend(result)
 
     return new_content
@@ -95,8 +104,9 @@ def main(args):
         content.extend(json.load(open(file)))
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         args.model_name_or_path,
-        use_fast=False,
+        use_fast=True,
     )
+    print(f"Length of content: {len(content)}")
     new_content = split_all(content, args.begin, args.end, tokenizer, args.max_length)
     new_content = filter_invalid_roles(new_content)
 
