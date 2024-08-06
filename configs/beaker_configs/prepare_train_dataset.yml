@@ -29,8 +29,8 @@ tasks:
     resources:
       gpuCount: 1
     constraints:
-      cluster:
-        - ai2/allennlp-cirrascale
+      hostname:
+        - allennlp-cirrascale-68.reviz.ai2.in
     context:
       priority: normal
       preemptible: false
