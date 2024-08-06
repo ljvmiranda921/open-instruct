@@ -27,7 +27,7 @@ tasks:
     result:
       path: /stage/data/processed/
     resources:
-      cpuCount: 24
+      gpuCount: 1
     constraints:
       cluster:
         - ai2/allennlp-cirrascale
